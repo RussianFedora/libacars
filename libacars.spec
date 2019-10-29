@@ -7,11 +7,12 @@ Release:        1%{?dist}
 Summary:        A library for decoding various ACARS message payloads
 License:        MIT
 URL:            https://github.com/szpajder/libacars
-Source:         https://github.com/szpajder/%{name}/archive/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Source0:        https://github.com/szpajder/%{name}/archive/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  pkgconfig(zlib)
+BuildRequires:  ninja-build
 
 %description
 libacars is a library for decoding various ACARS message payloads.
@@ -43,24 +44,31 @@ Example applications for for libacars:
 
 %prep
 %autosetup
+mkdir -p %{_target_platform}
+# Remove static lib build
+sed -i -e "/acars_static/d" src/libacars/CMakeLists.txt
 
 %build
-%cmake \
+pushd %{_target_platform}
+    %cmake -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_AR=/usr/bin/gcc-ar \
     -DCMAKE_RANLIB=/usr/bin/gcc-ranlib \
     -DCMAKE_NM=/usr/bin/gcc-nm \
     -DCMAKE_INSTALL_LIBDIR:PATH=%{_lib} \
-    -DCMAKE_SHARED_LINKER_FLAGS=""
-%make_build
+    -DCMAKE_SHARED_LINKER_FLAGS="" \
+    ..
+popd
+%ninja_build -C %{_target_platform}
 
 %install
-%make_install
+%ninja_install -C %{_target_platform}
 rm -rf %{buildroot}/%{_datadir}/doc
 
 %files
 %doc CHANGELOG.md README.md
 %license LICENSE.md
-%{_libdir}/%{name}.so.*
+%{_libdir}/%{name}.so.1
 
 %files devel
 %doc doc/API_REFERENCE.md doc/API_REFERENCE.md
